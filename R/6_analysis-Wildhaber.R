@@ -62,6 +62,7 @@ inps$fec$b1<- 83.69
 inps$N0<- c(rep(174,29),rep(173,41-29))
 
 project_pop<- function(inputs=NULL,
+                       t_spin=20,
                        t_final=38,
                        reps=2000,
                        run_type="Unpartitioned") #"Partitioned" and "Deterministic" also accepted
@@ -112,10 +113,10 @@ project_pop<- function(inputs=NULL,
       names(tau)<- names(inputs$mu)
     }
     # MATRIX OF ANNUAL POPULATION SIZES
-    N<- matrix(0, nrow=inputs$max_age+1, ncol=t_final+1)
+    N<- matrix(0, nrow=inputs$max_age+1, ncol=t_spin+t_final+1)
     N[,1]<- c(age0, Nt)
     # PROJECT POPULATION FORWARD
-    for(t in 1:t_final)
+    for(t in 1:(t_spin+t_final))
     {
       ## YEAR SPECIFIC PARAMETERS
       params<-lapply(1:length(mu), function(p)
@@ -150,40 +151,43 @@ project_pop<- function(inputs=NULL,
 }
 
 
-# growth_rate_checks<- function(pop_data=NULL)
-# {
-#   Ntot<- colSums(runs[[1]][2:nrow(runs[[1]]),])
-#   lambda<- sapply(2:length(Ntot), function(x)
-#     {
-#       Ntot[x]/Ntot[x-1]
-#     })
-#   diff<- sapply(2:length(lambda), function(x)
-#     {
-#       lambda[x]-lambda[x-1]
-#     })
-#   which(abs(diff)<=0.0001)
-#   meanL<- sapply(1:length(lambda), function(x)
-#     {
-#       mean(lambda[x:length(lambda)])
-#     })
-#   diff2<- sapply(2:length(meanL), function(x)
-#   {
-#     meanL[x]-meanL[x-1]
-#   })
-#   which(abs(diff2)<=0.0001)
-#   geo_meanL<- sapply(1:(length(Ntot)-1), function(x)
-#   {
-#     Ntot[length(Ntot)]/Ntot[x]
-#   })
-#   diff3<- sapply(2:length(geo_meanL), function(x)
-#   {
-#     geo_meanL[x]-geo_meanL[x-1]
-#   })
-#   which(abs(diff3)<=0.0001)
-#   return(list(annual_lambda_diff=diff,
-#               mean_lambda=list(mean_lambda=meanL, difference=diff2),
-#               geom_mean_lambda=list(mean_lambda=geo_meanL, difference=diff3)))
-# }
+growth_rate_checks<- function(pop_data=NULL)
+{
+  Ntot<- colSums(runs[[1]][2:nrow(runs[[1]]),])
+  lambda<- sapply(2:length(Ntot), function(x)
+    {
+      Ntot[x]/Ntot[x-1]
+    })
+  diff<- sapply(2:length(lambda), function(x)
+    {
+      lambda[x]-lambda[x-1]
+    })
+  which(abs(diff)<=0.0001)
+  which(abs(diff)<=0.001)
+  meanL<- sapply(1:length(lambda), function(x)
+    {
+      mean(lambda[x:length(lambda)])
+    })
+  diff2<- sapply(2:length(meanL), function(x)
+  {
+    meanL[x]-meanL[x-1]
+  })
+  which(abs(diff2)<=0.0001)
+  which(abs(diff2)<=0.001)
+  geo_meanL<- sapply(1:(length(Ntot)-1), function(x)
+  {
+    Ntot[length(Ntot)]/Ntot[x]
+  })
+  diff3<- sapply(2:length(geo_meanL), function(x)
+  {
+    geo_meanL[x]-geo_meanL[x-1]
+  })
+  which(abs(diff3)<=0.0001)
+  which(abs(diff3)<=0.001)
+  return(list(annual_lambda_diff=diff,
+              mean_lambda=list(mean_lambda=meanL, difference=diff2),
+              geom_mean_lambda=list(mean_lambda=geo_meanL, difference=diff3)))
+}
 
 growth_rate<- function(data=NULL,
                        t_spin=20,
@@ -191,18 +195,18 @@ growth_rate<- function(data=NULL,
 {
   pop_data<- data$pop_data
   # CHECK
-  if(t_spin >= ncol(pop_data[[1]])-1)
-  {
-    return(print("Population was not projected long enough for given spin-up period."))
-  }
   if(t_final > ncol(pop_data[[1]])-1)
   {
     return(print("Population was not projected long enough for given time period."))
   }
+  if(t_spin + t_final > ncol(pop_data[[1]])-1)
+  {
+    return(print("Population was not projected long enough for the given combination of spin-up period and years projected."))
+  }
   out<- lapply(1:length(pop_data), function(x)
   {
     Ntot<- colSums(pop_data[[x]][2:nrow(pop_data[[x]]),])
-    lambda<- sapply((t_spin+2):(t_final+1), function(x)
+    lambda<- sapply(2:(t_final+1)+t_spin, function(x)
     {
       Ntot[x]/Ntot[x-1]
     })
@@ -298,11 +302,14 @@ quasiextinction<- function(data=NULL,
 ### TESTS
 tm<- Sys.time()
 datD<- project_pop(inputs = inps,
-                   t_final=200,
-                   reps=500,
+                   t_spin=0,
+                   t_final=150,
+                   reps=2000,
                    run_type = "Deterministic")
 Sys.time()-tm
-lambdaD<- growth_rate(data = datD)
+lambdaD<- growth_rate(data = datD,
+                      t_spin = 20,
+                      t_final = 38)
 extD<- quasiextinction(data = datD, reps = 500, output_reps = 500)
 
 
@@ -370,7 +377,6 @@ stable_age0<- function(pop_data=NULL)
   # }
   # return(deterministic=N, deterministic2=N2, inputs=inputs)
   
-}
 
 
 # L<- inps$Linf*(1-exp(-1*inps$k*(0:41-inps$t0)))
