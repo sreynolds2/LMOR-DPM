@@ -1,4 +1,3 @@
-# NOTE ENCODING IS "â€¦"
 #----------------------------------------------------------------------
 # 
 # IMPORT DATA FOR STOCKED FISH
@@ -74,6 +73,11 @@ flds<-c("segment_id","tag_number","rpma","setdate",
 dat<-dat[,.SD,.SDcols=flds]
 
 spawn<- stocked[,.SD, .SDcols=c("tag_number","spawn.date")]
+  ## TO OBTAIN ENCODED PART
+  # tgs<- unique(spawn$tag_number)
+  # tgs<- tgs[order(tgs)]
+  # tail(tgs)
+  # rm(tgs)
 spawn<-subset(spawn,!(tag_number%in%c("â€¦", "..........","")))
 spawn<- spawn[-which(duplicated(spawn)),]
   # NOTE THERE ARE SOME STOCKING DATA ISSUES,
@@ -127,8 +131,8 @@ Gdat[, length_id := rowid(tag_number)]
 # change in length
 Gdat[,deltaL:=c(0,diff(length))]
 Gdat[,deltaL:=ifelse(length_id==1, 0, deltaL)]
-length(which(Gdat$deltaL<0)) #201
-tags<- unique(Gdat[deltaL<0,]$tag_number) #186
+length(which(Gdat$deltaL<0)) #205
+tags<- unique(Gdat[deltaL<0,]$tag_number) #190
 # look at fish with 9 recaps
 Gdat[which(Gdat$tag_number=="4626581E0E"),]
 # eventually add in a tolerance, but for now, let's call this 
@@ -139,17 +143,94 @@ Gdat[which(Gdat$tag_number=="4626581E0E"),]$length<-
 # RERUN CHANGE IN LENGTH
 Gdat[,deltaL:=c(0,diff(length))]
 Gdat[,deltaL:=ifelse(length_id==1, 0, deltaL)]
-length(which(Gdat$deltaL<0)) #198
-tags<- unique(Gdat[deltaL<0,]$tag_number) #185
+length(which(Gdat$deltaL<0)) #202
+tags<- unique(Gdat[deltaL<0,]$tag_number) #189
 # remove all remaining fish with ANY negative change in lengths
 Gdat<- subset(Gdat, !(tag_number %in% tags))
 # NOTE A HANDFUL OF FISH ON THIS LIST HAVE DIFFERING ORIGINS
 UALdat<- dcast(Gdat,tag_number~length_id, value.var="length",
                mean, fill=-1)
 UALdat[UALdat==-1]<-NA
+UALdat$ncap<- sapply(1:nrow(UALdat), function(x){ncol(UALdat)-1-length(which(is.na(UALdat[x,])))})
 
 deltaT<- dcast(Gdat, tag_number~length_id, value.var="tal",
                mean, fill=-1)
 deltaT[deltaT==-1]<-NA
 
 rm(dat, datUA, tags, Gdat)
+
+
+## SET UP MODEL
+vbgf_known_and_unknown_age <- function()
+{
+  #  vbgf model
+  for(i in 1:N_known)
+  {
+    La[i]<- Linf*(1-exp(-k*(Y[i,1]-t0)))
+    Y[i,2]~dnorm(La[i], tau[i])
+    # precision decreases with age f(delta)
+    tau[i] <- 1/((sigma^2)*Y[i,1]^(2*delta))
+  }
+  
+  # fabens model
+  for(i in 1:N_unknown)
+  {
+    for(j in 2:n_cap[i])
+    {
+      L[i,j]~dnorm(L_hat[i,j],1/(sigma_uknown_age^2))
+      L_hat[i,j]<-L[i,j-1]+ ((Linf-L[i,j-1])*(1-exp(-k*dY[i,j])))
+    }
+  }   
+  
+  # priors
+  t0~dnorm(0,0.0001)
+  # growth coefficient k
+  lnk~dnorm(0,0.0001)
+  log(k)<-lnk
+  # L_infinity
+  Linf~dunif(0,1800) #MAXIMUM PSPAP PS LENGTH: 1640  
+  sigma ~ dgamma(0.001, 0.001)
+  # scale precision with age
+  delta ~ dnorm(0,1/1000) 
+  sigma_uknown_age ~ dgamma(0.001, 0.001)	
+}
+
+# FIT MODEL
+## GENERATE INPUT DATA FOR JAGS
+LMR<- list()
+LMR$N_known<- nrow(L_at_A)
+LMR$Y<- as.matrix(L_at_A[,.SD, .SDcols=c("age","length")])
+LMR$N_unknown<- nrow(UALdat)
+LMR$n_cap<- UALdat$ncap
+LMR$L<- as.matrix(UALdat[,2:(ncol(UALdat)-1)])
+LMR$dY<- as.matrix(deltaT[,2:ncol(deltaT)])
+## INITIAL VALUES
+inits<- function(t)
+{	
+  list(
+    t0=0,
+    lnk=0,
+    Linf=max(c(LMR$Y[,2],max(LMR$L,na.rm = TRUE)))+10,
+    sigma=0.1,
+    delta=0,
+    sigma_uknown_age=0.1)
+}
+## PARAMETERS TO FIT
+params<- c("t0","Linf","k","sigma","delta","sigma_uknown_age")	
+## RUN MODEL FIT & SAVE
+ptm<-proc.time()
+fit <- jags.parallel(data=LMR,
+                     inits=inits,
+                     parameters=params,	
+                     model.file=vbgf_known_and_unknown_age,
+                     n.chains = 4,	
+                     n.iter = 200000,	
+                     n.burnin = 100000,
+                     export_obj_names=c("LMR"),
+                     n.thin=1,
+                     working.directory=getwd())
+tot<-(proc.time()-ptm)[3]/60
+out<- list(fit=fit,dat=LMR,mod=vbgf_known_and_unknown_age,
+             params=params,tot=tot)
+saveRDS(out, "_output/vbgf-known-and-unknown-age.RDS")
+
