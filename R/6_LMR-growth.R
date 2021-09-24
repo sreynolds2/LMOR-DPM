@@ -232,5 +232,63 @@ fit <- jags.parallel(data=LMR,
 tot<-(proc.time()-ptm)[3]/60
 out<- list(fit=fit,dat=LMR,mod=vbgf_known_and_unknown_age,
              params=params,tot=tot)
-saveRDS(out, "_output/vbgf-known-and-unknown-age.RDS")
+saveRDS(out, "output/vbgf-known-and-unknown-age.RDS")
+
+
+## SET UP SECOND MODEL
+vbgf_known_and_unknown_age_sigmaC <- function()
+{
+  #  vbgf model
+  for(i in 1:N_known)
+  {
+    La[i]<- Linf*(1-exp(-k*(Y[i,1]-t0)))
+    Y[i,2]~dnorm(La[i], 1/(sigma^2))
+  }
+  
+  # fabens model
+  for(i in 1:N_unknown)
+  {
+    for(j in 2:n_cap[i])
+    {
+      L[i,j]~dnorm(L_hat[i,j],1/(sigma^2))
+      L_hat[i,j]<-L[i,j-1]+ ((Linf-L[i,j-1])*(1-exp(-k*dY[i,j])))
+    }
+  }   
+  
+  # priors
+  t0~dnorm(0,0.0001)
+  # growth coefficient k
+  lnk~dnorm(0,0.0001)
+  log(k)<-lnk
+  # L_infinity
+  Linf~dunif(0,1800) #MAXIMUM PSPAP PS LENGTH: 1640  
+  sigma ~ dgamma(0.001, 0.001)
+}
+## INITIAL VALUES
+initsC<- function(t)
+{	
+  list(
+    t0=0,
+    lnk=0,
+    Linf=max(c(LMR$Y[,2],max(LMR$L,na.rm = TRUE)))+10,
+    sigma=0.1)
+}
+## PARAMETERS TO FIT
+paramsC<- c("t0","Linf","k","sigma")	
+## RUN MODEL FIT & SAVE
+ptm<-proc.time()
+fitC <- jags.parallel(data=LMR,
+                     inits=initsC,
+                     parameters=paramsC,	
+                     model.file=vbgf_known_and_unknown_age_sigmaC,
+                     n.chains = 4,	
+                     n.iter = 200000,	
+                     n.burnin = 100000,
+                     export_obj_names=c("LMR"),
+                     n.thin=1,
+                     working.directory=getwd())
+tot<-(proc.time()-ptm)[3]/60
+outC<- list(fit=fitC,dat=LMR,mod=vbgf_known_and_unknown_age_sigmaC,
+           params=paramsC,tot=tot)
+saveRDS(outC, "output/vbgf-known-and-unknown-age-constant-sigma.RDS")
 
