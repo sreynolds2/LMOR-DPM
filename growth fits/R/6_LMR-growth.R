@@ -72,8 +72,9 @@ flds<-c("segment_id","tag_number","rpma","setdate",
         "species","length","origin","length_type")
 dat<-dat[,.SD,.SDcols=flds]
 
-spawn<- stocked[,.SD, .SDcols=c("tag_number","spawn.date")]
-  ## TO OBTAIN ENCODED PART
+spawn<- stocked[,.SD, .SDcols=c("tag_number","spawn.date", "origin")]
+names(spawn)[match("origin", names(spawn))]<- "originS"
+  # # TO OBTAIN ENCODED PART
   # tgs<- unique(spawn$tag_number)
   # tgs<- tgs[order(tgs)]
   # tail(tgs)
@@ -85,8 +86,10 @@ spawn<- spawn[-which(duplicated(spawn)),]
 dat<- merge(dat, spawn, 
             all.x=TRUE,
             by="tag_number")
+dat[,origin:=ifelse(is.na(originS), origin, originS)]
 
-flds<- names(dat)
+flds<- setdiff(names(dat), "originS")
+dat<-dat[,.SD,.SDcols=flds]
 stock<- stocked[,.SD,.SDcols=flds]
 dat<- rbind(dat, stock)
 
@@ -157,7 +160,7 @@ deltaT<- dcast(Gdat, tag_number~length_id, value.var="tal",
                mean, fill=-1)
 deltaT[deltaT==-1]<-NA
 
-rm(dat, datUA, tags, Gdat)
+rm(datUA, tags, Gdat)
 
 
 ## SET UP MODEL
@@ -232,10 +235,10 @@ fit <- jags.parallel(data=LMR,
 tot<-(proc.time()-ptm)[3]/60
 out<- list(fit=fit,dat=LMR,mod=vbgf_known_and_unknown_age,
              params=params,tot=tot)
-saveRDS(out, "output/vbgf-known-and-unknown-age.RDS")
+saveRDS(out, "/growth fits/output/vbgf-known-and-unknown-age.RDS")
 
 
-## SET UP SECOND MODEL
+## SET UP SECOND MODEL -- PRECISION CONSTANT WITH AGE
 vbgf_known_and_unknown_age_sigmaC <- function()
 {
   #  vbgf model
@@ -290,5 +293,64 @@ fitC <- jags.parallel(data=LMR,
 tot<-(proc.time()-ptm)[3]/60
 outC<- list(fit=fitC,dat=LMR,mod=vbgf_known_and_unknown_age_sigmaC,
            params=paramsC,tot=tot)
-saveRDS(outC, "output/vbgf-known-and-unknown-age-constant-sigma.RDS")
+saveRDS(outC, "growth fits/output/vbgf-known-and-unknown-age-constant-sigma.RDS")
+
+
+
+## SET UP THIRD MODEL -- PRECISION CONSTANT WITH AGE, INFORMED LINF
+vbgf_known_and_unknown_age_informed <- function()
+{
+  #  vbgf model
+  for(i in 1:N_known)
+  {
+    La[i]<- Linf*(1-exp(-k*(Y[i,1]-t0)))
+    Y[i,2]~dnorm(La[i], 1/(sigma^2))
+  }
+  
+  # fabens model
+  for(i in 1:N_unknown)
+  {
+    for(j in 2:n_cap[i])
+    {
+      L[i,j]~dnorm(L_hat[i,j],1/(sigma^2))
+      L_hat[i,j]<-L[i,j-1]+ ((Linf-L[i,j-1])*(1-exp(-k*dY[i,j])))
+    }
+  }   
+  
+  # priors
+  t0~dnorm(0,0.0001)
+  # growth coefficient k
+  lnk~dnorm(0,0.0001)
+  log(k)<-lnk
+  # L_infinity
+  Linf~dnorm(1450,1/(47.56881)^2) #MAXIMUM PSPAP PS LENGTH: 1640  
+  sigma ~ dgamma(0.001, 0.001)
+}
+## INITIAL VALUES
+initsI<- function(t)
+{	
+  list(
+    t0=0,
+    lnk=0,
+    Linf=max(dat$length, na.rm = TRUE)+10,
+    sigma=0.1)
+}
+## PARAMETERS TO FIT
+paramsI<- c("t0","Linf","k","sigma")	
+## RUN MODEL FIT & SAVE
+ptm<-proc.time()
+fitI <- jags.parallel(data=LMR,
+                      inits=initsI,
+                      parameters=paramsI,	
+                      model.file=vbgf_known_and_unknown_age_informed,
+                      n.chains = 4,	
+                      n.iter = 200000,	
+                      n.burnin = 100000,
+                      export_obj_names=c("LMR"),
+                      n.thin=1,
+                      working.directory=getwd())
+tot<-(proc.time()-ptm)[3]/60
+outI<- list(fit=fitI,dat=LMR,mod=vbgf_known_and_unknown_age_informed,
+            params=paramsI,inits=initsI, tot=tot)
+saveRDS(outI, "growth fits/output/vbgf-known-and-unknown-age-informed-Linf.RDS")
 
