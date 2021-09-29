@@ -18,6 +18,7 @@ inputs$ln_vbgf$k<- exp(model_fit$report$mu[2])
 inputs$ln_vbgf$t0<- model_fit$report$t0 
 inputs$ln_vbgf$sigma<- exp(model_fit$report$log_obs_er)
   # WHY IS THIS LOG OBS ERROR???
+rm(vbgf, model_fit)
 ## SURVIVAL PARAMETERS BY STAGE
 inputs$phi_1<- 0.151
 inputs$phi_juv<- 0.780
@@ -37,7 +38,7 @@ inputs$sa2sa<- 0.897
 ### PROBABILITY OF BEING IN EACH STAGE BY AGE
 p_stage<- lapply(c("vbgf", "ln_vbgf"), function(x)
 {
-  age<- 2:inputs$max_age
+  age<- 3:inputs$max_age
   if(x=="vbgf")
   {
     La<- inputs$vbgf$Linf*(1-exp(-inputs$vbgf$k*(age-inputs$vbgf$t0)))
@@ -52,63 +53,107 @@ p_stage<- lapply(c("vbgf", "ln_vbgf"), function(x)
     p_sa<- pnorm(log(800), mean=log(La), sd=inputs$ln_vbgf$sigma)-p_juv
     p_adult<- 1-pnorm(log(800), mean=log(La), sd=inputs$ln_vbgf$sigma)
   }
-  prob<- list(juv=p_juv, subA=p_sa, adult=p_adult)
+  p_juv<- c(0,1,p_juv)
+  p_sa<- c(0,0,p_sa[1]+p_adult[1], p_sa[2:length(p_sa)])
+  p_adult<-c(0,0,0,p_adult[2:length(p_adult)])
+  p_1<- c(1,rep(0, length(p_juv)-1))
+  prob<- list(age1=p_1, juv=p_juv, subA=p_sa, adult=p_adult)
   return(prob)
 })
 names(p_stage)<- c("vbgf", "ln_vbgf")
+### MINIMUM AGE AT MATURATION
+### PROBABLY WANT TO ADJUST JUST GOING OFF OF THE DISTRIBUTIONS ABOVE
+a_min<- 4
+inputs$a_min<- a_min
 ## SURVIVALS FROM SR VBGF FIT
-phi<- p_stage$vbgf$juv*inputs$phi_juv + p_stage$vbgf$subA*inputs$phi_sa + 
+inputs$phi$vbgf<- p_stage$vbgf$age1*inputs$phi_1 + 
+  p_stage$vbgf$juv*inputs$phi_juv + p_stage$vbgf$subA*inputs$phi_sa + 
   p_stage$vbgf$adult*inputs$phi_adult
-inputs$phi$vbgf<- c(inputs$phi_1, phi)
 ## SURVIVALS FROM MEC LN_VBGF FIT
-phi<- p_stage$ln_vbgf$juv*inputs$phi_juv + p_stage$ln_vbgf$subA*inputs$phi_sa + 
+inputs$phi$ln_vbgf<- p_stage$ln_vbgf$age1*inputs$phi_1 + 
+  p_stage$ln_vbgf$juv*inputs$phi_juv + p_stage$ln_vbgf$subA*inputs$phi_sa + 
   p_stage$ln_vbgf$adult*inputs$phi_adult
-inputs$phi$ln_vbgf<- c(inputs$phi_1, phi)
+
 
 # FERTILITY VALUES
 ## PROPORTION OF FEMALES THAT ARE REPRODUCTIVELY READY
-### MATURATION
-m<-rep(0, inputs$max_age)
-m[i]<- p_adult[i]-(p_adult[i-1]*phi_adult)/(p_1[i-1]*phi_1+p_juv[i-1]*phi_juv+p_sa[i-1]*phi_sa+p_adult[i-1]*phi_adult)
-# a_min<- ?? 
-# # a_max<- 27 
-# # a_h<- 19   
-# # k<- 0.77 #k=1 means 3*sigma is approximately 5 years; #k=0.77 & k=0.9 means 3*sigma is approximately 7 and 6 years
-# # mat_Cdist<-1/(1+exp(-k*(a_min:(a_max-1)-a_h)))
-# # m<-rep(0, a_max-a_min+1)
-# # m[1]<-mat_Cdist[1]
-# # for(i in 2:length(mat_Cdist))
-# # {
-# #   m[i]<- mat_Cdist[i]-mat_Cdist[i-1]
-# # }
-# # m[length(mat_Cdist)+1]<- 1-mat_Cdist[length(mat_Cdist)]
-# #### SAVE MATURATION INPUTS
-# inputs$mat$a_min<- a_min
-# # inputs$mat$a_max<- a_max
-# # inputs$mat$a_h<- a_h
-# # inputs$mat$k<- k
-# # inputs$mat$m_i<- c(rep(0,a_min-1), m, rep(0, inputs$max_age-a_max))
-# # rm(a_max, a_h, k, mat_Cdist, m,i)
+### MATURATION FROM SR VBGF FIT
+m<- sapply(2:length(p_stage$vbgf$adult), function(i)
+  {
+    p_stage$vbgf$adult[i]-(p_stage$vbgf$adult[i-1]*inputs$phi_adult)/
+      (p_stage$vbgf$age1[i-1]*inputs$phi_1 + p_stage$vbgf$juv[i-1]*inputs$phi_juv + 
+        p_stage$vbgf$subA[i-1]*inputs$phi_sa + p_stage$vbgf$adult[i-1]*inputs$phi_adult)
+  })
+inputs$m_i$vbgf<- c(0, m)
+### MATURATION FROM MEC LN_VBGF FIT
+m<- sapply(2:length(p_stage$ln_vbgf$adult), function(i)
+{
+  p_stage$ln_vbgf$adult[i]-(p_stage$ln_vbgf$adult[i-1]*inputs$phi_adult)/
+    (p_stage$ln_vbgf$age1[i-1]*inputs$phi_1 + p_stage$ln_vbgf$juv[i-1]*inputs$phi_juv + 
+       p_stage$ln_vbgf$subA[i-1]*inputs$phi_sa + p_stage$ln_vbgf$adult[i-1]*inputs$phi_adult)
+})
+#### SET NEGATIVE PROBABILITIES TO 0
+m[m<0]<-0
+inputs$m_i$ln_vbgf<- c(0, m)
+#### NOTE NOT ALL FISH ARE MATURE BY AGE 41; CAN ADJUST THIS MANUALLY IF DESIRED
+### MATURATION FROM VALUES PRESENTED AT 2019 FSM
+a_m<- 8
+a_max<- 15
+a_h<- 10
+k<- 1.47 #means 3*sigma is approximately 3.7 years
+mat_Cdist<-1/(1+exp(-k*(a_m:(a_max-1)-a_h)))
+m<-rep(0, a_max-a_m+1)
+m[1]<-mat_Cdist[1]
+for(i in 2:length(mat_Cdist))
+{
+  m[i]<- mat_Cdist[i]-mat_Cdist[i-1]
+}
+m[length(mat_Cdist)+1]<- 1-mat_Cdist[length(mat_Cdist)]
+inputs$mat$a_min<- a_m
+inputs$mat$a_max<- a_max
+inputs$mat$a_h<- a_h
+inputs$mat$k<- k
+inputs$m_i$FSM<- c(rep(0,a_m-1), m, rep(0, inputs$max_age-a_max))
+rm(a_max, a_h, k, mat_Cdist, m, i, a_m)
 ### REPRODUCTIVE PERIOD
 max_period<- 5
-## FROM FULLER ET AL. 2007 AND DELONAY ET AL. 2016:
-### SPECIFIC PERIOD 1-3 PROBS FROM KNOWN DATA WITH THE REMAINING 
-### PROBABILITY SPLIT AMONG PERIODS 4 TO MAX_PERIOD SUCH THAT
-### PROBS[T+1]=PROBS[T]/2 FOR T>4
+#### FROM FULLER ET AL. 2007 AND DELONAY ET AL. 2016:
+#### SPECIFIC PERIOD 1-3 PROBS FROM KNOWN DATA WITH THE REMAINING 
+#### PROBABILITY SPLIT AMONG PERIODS 4 TO MAX_PERIOD SUCH THAT
+#### PROBS[T+1]=PROBS[T]/2 FOR T>4
 probs<-c(0, 8/21, 13/21*3/5, 
          13/21*2/5*1/sum(2^(0:(max_period-4)))*2^((max_period-4):0))
 #### SAVE REPRODUCTION PERIOD INPUTS
 inputs$reproduction$max_period<- max_period
-inputs$reproduction$p_t<- c(probs, rep(0, inputs$max_age-a_min-max_period))
+inputs$reproduction$p_t<- c(probs, rep(0, inputs$max_age-max_period))
 rm(max_period, probs)
 ### CALCULATE PROPORTION FROM MATURATION PROBABILITIES 
 ### AND REPRODUCTION PERIODS
-inputs$psi<- rep(0, inputs$max_age)
-inputs$psi[a_min]<- inputs$mat$m_i[a_min]
+#### FROM SR VBGF FIT
+inputs$psi$vbgf<- rep(0, inputs$max_age)
+inputs$psi$vbgf[a_min]<- inputs$m_i$vbgf[a_min]
 for(i in (a_min+1):inputs$max_age)
 {
-  inputs$psi[i]<- inputs$mat$m_i[i]+
-    sum(inputs$psi[a_min:(i-1)]*inputs$reproduction$p_t[i-a_min:(i-1)])
+  inputs$psi$vbgf[i]<- inputs$m_i$vbgf[i]+
+    sum(inputs$psi$vbgf[a_min:(i-1)]*inputs$reproduction$p_t[i-a_min:(i-1)])
+}
+rm(i)
+#### FROM MEC LN_VBGF FIT
+inputs$psi$ln_vbgf<- rep(0, inputs$max_age)
+inputs$psi$ln_vbgf[a_min]<- inputs$m_i$ln_vbgf[a_min]
+for(i in (a_min+1):inputs$max_age)
+{
+  inputs$psi$ln_vbgf[i]<- inputs$m_i$ln_vbgf[i]+
+    sum(inputs$psi$ln_vbgf[a_min:(i-1)]*inputs$reproduction$p_t[i-a_min:(i-1)])
+}
+rm(i)
+#### FROM UMOR APPROACH AND 2019 FSM VALUES
+inputs$psi$FSM<- rep(0, inputs$max_age)
+inputs$psi$FSM[inputs$mat$a_min]<- inputs$m_i$FSM[inputs$mat$a_min]
+for(i in (inputs$mat$a_min+1):inputs$max_age)
+{
+  inputs$psi$FSM[i]<- inputs$m_i$FSM[i]+
+    sum(inputs$psi$FSM[inputs$mat$a_min:(i-1)]*inputs$reproduction$p_t[i-inputs$mat$a_min:(i-1)])
 }
 rm(i)
 
@@ -119,24 +164,18 @@ inputs$probF<- 0.5
 ### AGE-LENGTH RELATIONSHIP
 length_at_age<- function(age=NULL,
                          reps=NULL,
+                         inputs=NULL,
                          type="ln_vbgf")
 {
-  if(type="vbgf")
+  if(type=="vbgf")
   {
-    mod<- inputs$vbgf
+    La<- inputs$vbgf$Linf*(1-exp(-inputs$vbgf$k*(age-inputs$vbgf$t0)))
+    l<-rnorm(reps, La, inputs$vbgf$sigma)
   }
-  if(type="ln_vbgf")
+  if(type=="ln_vbgf")
   {
-    mod<- inputs$ln_vbgf
-  }
-  La<- mod$Linf*(1-exp(-mod$k*(age-mod$t0)))
-  if(type="vbgf")
-  {
-    l<-rnorm(reps, La, mod$sigma)
-  }
-  if(type="ln_vbgf")
-  {
-    l<- exp(rnorm(reps, log(La), mod$sigma))
+    La<- inputs$ln_vbgf$Linf*(1-exp(-inputs$ln_vbgf$k*(age-inputs$ln_vbgf$t0)))
+    l<- exp(rnorm(reps, log(La), inputs$ln_vbgf$sigma))
   }
   for(i in 1:length(l))
   {
@@ -188,7 +227,7 @@ n=1000000
 a=1:inputs$max_age
 fec_vbgf<- lapply(a, function(x)
 {
-  lengths<- length_at_age(age=x, reps=n, type="vbgf")
+  lengths<- length_at_age(age=x, reps=n, inputs = inputs, type="vbgf")
   mn_lgth<- mean(lengths)
   med_lgth<- median(lengths)
   fecundity<- eggs(fork_length=lengths, a=intrcpt, b=slp, dispersion_param=disp)
@@ -210,7 +249,7 @@ write.csv(fecundity_vbgf, "./baseline-parameters/fecundity_estimates_by_age_vbgf
 
 fec_ln<- lapply(a, function(x)
 {
-  lengths<- length_at_age(age=x, reps=n, type="ln_vbgf")
+  lengths<- length_at_age(age=x, reps=n, inputs=inputs, type="ln_vbgf")
   mn_lgth<- mean(lengths)
   med_lgth<- median(lengths)
   fecundity<- eggs(fork_length=lengths, a=intrcpt, b=slp, dispersion_param=disp)
@@ -229,13 +268,15 @@ fecundity_ln<- data.frame(Age=a,
                           Median_Length=sapply(fec_ln, "[[", 6))
 write.csv(fecundity_ln, "./baseline-parameters/fecundity_estimates_by_age_ln_vbgf.csv",
           row.names = FALSE)
+rm(dat, mean_fl, sd_fl, fit, intrcpt, slp, disp, n, a, fec_vbgf, fecundity_vbgf,
+   fec_ln, fecundity_ln, length_at_age, eggs)
 
 
-E<- read.csv("./dat/fecundity_estimates_by_age_vbgf.csv")
+E<- read.csv("./baseline-parameters/fecundity_estimates_by_age_vbgf.csv")
 inputs$eggs$vbgf<- E$Mean_Eggs_Produced
 inputs$eggs$vbgf[1:(a_min-1)]<- 0
-E<- read.csv("./dat/fecundity_estimates_by_age_ln_vbgf.csv")
+E<- read.csv("./baseline-parameters/fecundity_estimates_by_age_ln_vbgf.csv")
 inputs$eggs$ln_vbgf<- E$Mean_Eggs_Produced
 inputs$eggs$ln_vbgf[1:(a_min-1)]<- 0
 
-rm(E, a_min)
+rm(E, a_min, p_stage)
