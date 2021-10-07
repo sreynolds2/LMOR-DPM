@@ -280,3 +280,39 @@ inputs$eggs$ln_vbgf<- E$Mean_Eggs_Produced
 inputs$eggs$ln_vbgf[1:(a_min-1)]<- 0
 
 rm(E, a_min, p_stage)
+
+### FIGURES
+par(mar=c(4,4,4,2),
+    oma=c(1,1,0,0))
+plot(2:41, inputs$phi$vbgf[2:41], pch=19, xlab="Age", ylab="Survival Probability")
+points(inputs$phi$ln_vbgf[2:41], col="blue", pch=19)
+legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)"), col=c("black", "blue"), 
+       pch=19, bty="n")
+
+age<-1:41
+La_vbgf<- inputs$vbgf$Linf*(1-exp(-inputs$vbgf$k*(age-inputs$vbgf$t0)))
+La_ln<- inputs$ln_vbgf$Linf*(1-exp(-inputs$ln_vbgf$k*(age-inputs$ln_vbgf$t0)))
+plot(age, La_vbgf, xlab="Age", ylab="Length (mm)", pch=19)
+points(age, La_ln, col="blue", pch=19)
+legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)"), col=c("black", "blue"), 
+       pch=19, bty="n")
+
+age<-1:41
+plot(age, inputs$eggs$ln_vbgf, xlab="Age", ylab="Number of Eggs", col="blue", pch=19)
+points(age, inputs$eggs$vbgf, pch=19)
+legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)"), col=c("black", "blue"), 
+       pch=19, bty="n")
+
+age<-1:41
+plot(age, inputs$m_i$FSM, col="green", xlab="Age", ylab="Probability of Maturing", pch=19, type="b")
+points(age, inputs$m_i$ln_vbgf, col="blue", pch=19, type="b")
+points(age, inputs$m_i$vbgf, pch=19, type="b")
+legend("topright", c("JAGS VBGF", "TMB LN(VBGF)", "FSM"), 
+       col=c("black", "blue", "green"), lty=1, pch=19, bty="n")
+
+age<-1:41
+plot(age, inputs$psi$FSM, col="green", xlab="Age", ylab="Proportion of Gravid Females", pch=19)
+points(age, inputs$psi$ln_vbgf, col="blue", pch=19)
+points(age, inputs$psi$vbgf, pch=19)
+legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)", "FSM"), 
+       col=c("black", "blue", "green"), pch=19, bty="n")
