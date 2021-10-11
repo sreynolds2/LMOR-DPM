@@ -439,20 +439,20 @@ legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)"), col=c("black", "blue"),
 age<-1:41
 plot(age, c(rep(-10000,inputs$a_min-1), 
             inputs$eggs$ln_vbgf[inputs$a_min:inputs$max_age]), ylim=c(0,35000),
-            xlab="Age", ylab="Mean Number of Eggs", col="blue", pch=19)
+            xlab="Age", ylab="Mean Number of Eggs per Spawning Female", col="blue", pch=19)
 points(age, c(rep(-10000,inputs$a_min-1), 
               inputs$eggs$vbgf[inputs$a_min:inputs$max_age]), pch=19)
 legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)"), col=c("black", "blue"), 
        pch=19, bty="n")
-#### AVERAGE FECUNDITY PER FEMALE
-age<-1:41
-plot(age, c(rep(-10000,inputs$a_min-1), 
-            inputs$allF_eggs$ln_vbgf[inputs$a_min:inputs$max_age]), ylim=c(0,35000),
-     xlab="Age", ylab="Mean Number of Eggs", col="blue", pch=19)
-points(age, c(rep(-10000,inputs$a_min-1), 
-              inputs$allF_eggs$vbgf[inputs$a_min:inputs$max_age]), pch=19)
-legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)"), col=c("black", "blue"), 
-       pch=19, bty="n")
+# #### AVERAGE FECUNDITY PER FEMALE (NOT ACCOUNTING FOR RR STATUS)
+# age<-1:41
+# plot(age, c(rep(-10000,inputs$a_min-1), 
+#             inputs$allF_eggs$ln_vbgf[inputs$a_min:inputs$max_age]), ylim=c(0,35000),
+#      xlab="Age", ylab="Mean Number of Eggs", col="blue", pch=19)
+# points(age, c(rep(-10000,inputs$a_min-1), 
+#               inputs$allF_eggs$vbgf[inputs$a_min:inputs$max_age]), pch=19)
+# legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)"), col=c("black", "blue"), 
+#        pch=19, bty="n")
 #### MATURATION AGE
 age<-1:41
 plot(age, inputs$m_i$FSM, col="green", xlab="Age", ylab="Probability of Maturing", pch=19, type="b")
@@ -468,3 +468,13 @@ points(age, inputs$psi$ln_vbgf, col="blue", pch=19, type="b")
 points(age, inputs$psi$vbgf, pch=19, type="b")
 legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)", "FSM"), 
        col=c("black", "blue", "green"), pch=19, lty=1, bty="n")
+#### AVERAGE FECUNDITY PER FEMALE
+age<-1:41
+plot(age, inputs$psi$FSM*inputs$eggs$ln_vbgf, xlab="Age", ylab="Eggs per Female", 
+     col="lightblue", pch=19, type="b")
+points(age, inputs$psi$FSM*inputs$eggs$vbgf, col="gray", pch=19, type="b")
+points(age, inputs$psi$vbgf*inputs$eggs$vbgf, pch=19, type="b")
+points(age, inputs$psi$ln_vbgf*inputs$eggs$ln_vbgf, col="blue", pch=19, type="b")
+legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)", "FSM Maturation + JAGS VBGF", 
+                        "FSM Maturation + TMB LN(VBGF)"), 
+       col=c("black", "blue", "gray", "lightblue"), pch=19, bty="n")
