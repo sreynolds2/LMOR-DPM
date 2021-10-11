@@ -120,5 +120,11 @@ surv_and_mat_from_stage<- function(max_age=41, # MAXIMUM FEMALE AGE OF REPRODUCT
               stage=stage))
 }
 
-inps<- surv_and_mat_from_stage()  
-saveRDS(inps, "./baseline-parameters/phi_mi.rds")
+if(exists("run_phi_mat"))
+{
+  if(run_phi_mat)
+  {
+    inps<- surv_and_mat_from_stage()  
+    saveRDS(inps, "./baseline-parameters/phi_mi.rds")
+  }
+}

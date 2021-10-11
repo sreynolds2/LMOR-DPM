@@ -60,3 +60,52 @@ points(age, inputs$psi$ln_vbgf*inputs$eggs$ln_vbgf, col="blue", pch=19, type="b"
 legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)", "FSM Maturation + JAGS VBGF", 
                         "FSM Maturation + TMB LN(VBGF)"), 
        col=c("black", "blue", "gray", "lightblue"), pch=19, bty="n")
+
+
+
+
+## FIGURE COMPARISON OF APPROACHES -- NEEDS TO BE RECODED
+age<-1:inputs$max_age
+### VBGF STOCHASTIC DRAW COMPARISON; EGGS FROM ADULTS ONLY
+plot(age, fecundity_vbgf$Mean_Eggs_Adults, xlab="Age", ylab="Mean Number of Eggs", col="blue", pch=19)
+points(age, fecundity_vbgf2$Mean_Eggs_Adults, pch=19)
+points(age, fecundity_vbgf5$Mean_Eggs_Adults, pch=19, col="red")
+legend("bottomright", c("1 million", "2 million", "5 million"),
+       col=c("black", "blue", "red"), pch=19, bty="n")
+
+### VBGF STOCHASTIC DRAW COMPARISON; EGGS FROM ALL BY AGE: ADULTS WEIGHTED
+plot(age, fecundity_vbgf$Mean_Eggs_Adults*p_stage$ln_vbgf$adult, xlab="Age", ylab="Number of Eggs", col="blue", pch=19)
+points(age, fecundity_vbgf2$Mean_Eggs_Adults*p_stage$ln_vbgf$adult, pch=19)
+points(age, fecundity_vbgf5$Mean_Eggs_Adults*p_stage$ln_vbgf$adult, pch=19, col="red")
+legend("bottomright", c("1 million", "2 million", "5 million"),
+       col=c("black", "blue", "red"), pch=19, bty="n")
+
+### LN_VBGF STOCHASTIC DRAW COMPARISON; EGGS FROM ADULTS ONLY
+plot(age, fecundity_ln$Mean_Eggs_Adults, xlab="Age", ylab="Number of Eggs", col="blue", pch=19)
+points(age, fecundity_ln2$Mean_Eggs_Adults, pch=19)
+points(age, fecundity_ln5$Mean_Eggs_Adults, pch=19, col="red")
+legend("bottomright", c("1 million", "2 million", "5 million"),
+       col=c("black", "blue", "red"), pch=19, bty="n")
+
+### LN_VBGF STOCHASTIC DRAW COMPARISON; EGGS FROM ALL BY AGE: ADULTS WEIGHTED
+plot(age, fecundity_ln$Mean_Eggs_Adults*p_stage$ln_vbgf$adult, xlab="Age", ylab="Number of Eggs", col="blue", pch=19)
+points(age, fecundity_ln2$Mean_Eggs_Adults*p_stage$ln_vbgf$adult, pch=19)
+points(age, fecundity_ln5$Mean_Eggs_Adults*p_stage$ln_vbgf$adult, pch=19, col="red")
+legend("bottomright", c("1 million", "2 million", "5 million"),
+       col=c("black", "blue", "red"), pch=19, bty="n")
+
+### VBGF EGGS FROM ALL BY AGE: AVERAGE OF DRAWS VS. ADULTS WEIGHTED
+plot(age, fecundity_vbgf2$Mean_Eggs_All, xlab="Age", ylab="Number of Eggs", pch=19)
+points(age, fecundity_vbgf2$Mean_Eggs_Adults*p_stage$vbgf$adult, pch=19, col="blue")
+legend("bottomright", c("Eggs from All Fish", "Eggs from Adults Weighted by Proportion"),
+       col=c("black", "blue"), pch=19, bty="n")
+
+### LN_VBGF EGGS FROM ALL BY AGE: AVERAGE OF DRAWS VS. ADULTS WEIGHTED
+plot(age, fecundity_ln2$Mean_Eggs_All, xlab="Age", ylab="Number of Eggs", pch=19)
+points(age, fecundity_ln2$Mean_Eggs_Adults*p_stage$ln_vbgf$adult, pch=19, col="blue")
+legend("bottomright", c("Eggs from All Fish", "Eggs from Adults Weighted by Proportion"),
+       col=c("black", "blue"), pch=19, bty="n")
+
+rm(dat, mean_fl, sd_fl, fit, intrcpt, slp, disp, n, a, fec_vbgf, fecundity_vbgf,
+   fec_ln, fecundity_ln, length_at_age, eggs, age)
+
