@@ -11,7 +11,10 @@ surv_and_mat_from_stage<- function(max_age=41, # MAXIMUM FEMALE AGE OF REPRODUCT
                                    phi_adult=0.976,
                                    # TRANSITION PARAMETERS
                                    j2j=0.893,
-                                   sa2sa=0.897)
+                                   sa2sa=0.897,
+                                   # GROWTH MODELS
+                                   vbgf=NULL,
+                                   ln_vbgf=NULL)
 {
   # INITIALIZE LISTS
   stage<- list()
@@ -33,20 +36,41 @@ surv_and_mat_from_stage<- function(max_age=41, # MAXIMUM FEMALE AGE OF REPRODUCT
   # AGE 1+ SURVIVALS
   ## GROWTH PARAMETERS -- NOT SEX SPECIFIC (EFFECTS MATURATION, WHICH DOES DIFFER 
   ## AMONG SEXES)
+  if(!is.null(vbgf))
+  {
+    growth$vbgf$Linf=vbgf$Linf
+    growth$vbgf$k=vbgf$k
+    growth$vbgf$t0=vbgf$t0
+    growth$vbgf$sigma=vbgf$sigma
+  }
+  if(!is.null(ln_vbgf))
+  {
+    growth$ln_vbgf$Linf=ln_vbgf$Linf
+    growth$ln_vbgf$k=ln_vbgf$k
+    growth$ln_vbgf$t0=ln_vbgf$t0
+    growth$ln_vbgf$sigma=ln_vbgf$sigma
+  }
   ### SR
-  vbgf<-readRDS("./growth fits/output/vbgf-known-and-unknown-age-constant-sigma.Rds")
-  growth$vbgf$Linf<- as.numeric(vbgf$fit$BUGSoutput$mean$Linf)
-  growth$vbgf$k<- as.numeric(vbgf$fit$BUGSoutput$mean$k)
-  growth$vbgf$t0<- as.numeric(vbgf$fit$BUGSoutput$mean$t0) 
-  growth$vbgf$sigma<- as.numeric(vbgf$fit$BUGSoutput$mean$sigma)
+  if(is.null(vbgf))
+  {
+    vbgf<-readRDS("./growth fits/output/vbgf-known-and-unknown-age-constant-sigma.Rds")
+    growth$vbgf$Linf<- as.numeric(vbgf$fit$BUGSoutput$mean$Linf)
+    growth$vbgf$k<- as.numeric(vbgf$fit$BUGSoutput$mean$k)
+    growth$vbgf$t0<- as.numeric(vbgf$fit$BUGSoutput$mean$t0) 
+    growth$vbgf$sigma<- as.numeric(vbgf$fit$BUGSoutput$mean$sigma)
+    vbgf=NULL
+  }
   ### MEC
-  model_fit<-readRDS("./growth fits/vbgf-rpma-4-mec/rpma-4-vbgf-re.Rds")
-  growth$ln_vbgf$Linf<- exp(model_fit$report$mu[1])
-  growth$ln_vbgf$k<- exp(model_fit$report$mu[2])
-  growth$ln_vbgf$t0<- model_fit$report$t0 
-  growth$ln_vbgf$sigma<- exp(model_fit$report$log_obs_er)
-  # WHY IS THIS LOG OBS ERROR???
-  rm(vbgf, model_fit)
+  if(is.null(ln_vbgf))
+  {
+    model_fit<-readRDS("./growth fits/vbgf-rpma-4-mec/rpma-4-vbgf-re.Rds")
+    growth$ln_vbgf$Linf<- exp(model_fit$report$mu[1])
+    growth$ln_vbgf$k<- exp(model_fit$report$mu[2])
+    growth$ln_vbgf$t0<- model_fit$report$t0 
+    growth$ln_vbgf$sigma<- exp(model_fit$report$log_obs_er)
+      # WHY IS THIS LOG OBS ERROR???
+    rm(model_fit)
+  }
   ## FIT WITH RANDOM EFFECT OF YEAR
   # J2SA<-plogis(rnorm(n,-3.036152,sqrt(1/4.010753e-01)))
   # SA2A<-plogis(rnorm(n,2.788886e-03 ,sqrt(1/4.796302e-01)))

@@ -75,9 +75,14 @@ inps$ln_vbgf$fit$sd_temp$l_at_a<- 0
 ## FECUNDITY PARAMETERS
 inps$fec$b0<- params$fecundity$intercept 
 inps$fec$b1<- params$fecundity$slope
+inps$fec$mean_fl<- params$fecundity$mean_fl
+inps$fec$sd_fl<- params$fecundity$sd_fl
 inps$fec$fit$sd$ln_eggs_at_l<- params$fecundity$disp
 inps$fec$fit$sd_temp$ln_eggs_at_l<- 0
 #inps$fec$params$sd$eggs_at_l#vector of length specific total sd's
 #inps$fec$params$sd_temp$eggs_at_l<- #vector of length specific temporal sd's
 ## INITIAL POPULATION
 #inps$N0<- #load from file
+
+
+

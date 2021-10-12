@@ -82,3 +82,8 @@ params$allF_eggs$ln_vbgf<- E$Mean_Eggs_All
 # params$allF_eggs$ln_vbgf[1:(params$a_min-1)]<- 0
 
 rm(E)
+
+## AGE-0 SURVIVAL
+params$phi0<- 0.000075
+
+saveRDS(params, "./output/parameterizations/default-parameters.rds")
