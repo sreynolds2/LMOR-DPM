@@ -65,7 +65,8 @@ project_pop<- function(inputs=NULL,
                        t_spin=20,
                        t_final=38,
                        reps=2000,
-                       run_type="Unpartitioned") #"Partitioned" and "Deterministic" also accepted
+                       run_type="Unpartitioned", #"Partitioned" and "Deterministic" also accepted
+                       save_path=FALSE)
 {
   # CHECK
   chk<- c(all(names(inputs$mu)==names(inputs$sd)),
@@ -115,6 +116,8 @@ project_pop<- function(inputs=NULL,
     # MATRIX OF ANNUAL POPULATION SIZES
     N<- matrix(0, nrow=inputs$max_age+1, ncol=t_spin+t_final+1)
     N[,1]<- c(age0, Nt)
+    # INITIALIZE PARAMETER PATH
+    omega<- NULL
     # PROJECT POPULATION FORWARD
     for(t in 1:(t_spin+t_final))
     {
@@ -130,14 +133,24 @@ project_pop<- function(inputs=NULL,
       names(params)<- names(mu)
       # SURVIVAL VECTOR
       phi<- c(params$phi1, rep(params$phi2plus, inputs$max_age-2))
+      # FERTILITIES
       # OPTIONS:
       # A: PULL MEAN FORK LENGTH FROM 95% CI DISTRIBUTION FOR EACH AGE CLASS i
       # B: PULL Nti FORK LENGTHS FOR EACH AGE CLASS i
       # START WITH A SINCE LESS LIKE IBM
-      FLi<- inputs$vbg$Linf*(1-exp(-inputs$vbg$k*(1:inputs$max_age)))
+      FLi<- inputs$vbg$Linf*(1-exp(-inputs$vbg$k*(1:inputs$max_age-inputs$vbg$t0)))
       Ei<- inputs$fec$b0+inputs$fec$b1*FLi
+      Ei[Ei<0]<- 0
+      if(save_path==TRUE)
+      {
+        tmp<- as.list(Ei)
+        names(tmp)<- paste0("E", 1:inputs$max_age)
+        tmp<- as.data.frame(c(params, tmp))
+        omega<- rbind(omega, tmp)
+      }
       Ei[1:ceiling(params$mat_age-1)]<- 0
-      Ft<-  round(Ei*params$probF*rbinom(inputs$max_age, Nt, params$p_spawn)) 
+      Ft<-  round(Ei*params$probF*rbinom(inputs$max_age, Nt, params$p_spawn))
+      # UPDATE ABUNDANCES
       Nitplus<- rbinom(inputs$max_age,
                        c(age0, Nt[1:(inputs$max_age-1)]), 
                        c(params$phi0, phi))
@@ -145,9 +158,11 @@ project_pop<- function(inputs=NULL,
       Nt<- Nitplus
       N[,t+1]<- c(age0, Nt)
     }
-    return(N)
+    return(list(N=N, omega=omega))
   })
-  return(list(pop_data=runs, run_type=run_type))
+  omega<- lapply(runs, "[[", 2)
+  runs<- lapply(runs, "[[", 1)
+  return(list(pop_data=runs, run_type=run_type, param_path=omega))
 }
 
 
@@ -302,34 +317,52 @@ quasiextinction<- function(data=NULL,
 ### TESTS
 tm<- Sys.time()
 datD<- project_pop(inputs = inps,
+                   #growth_type = "vbgf",
                    t_spin=0,
                    t_final=150,
                    reps=2000,
-                   run_type = "Deterministic")
+                   run_type = "Deterministic",
+                   save_path = FALSE)
 Sys.time()-tm
 lambdaD<- growth_rate(data = datD,
                       t_spin = 20,
                       t_final = 38)
-extD<- quasiextinction(data = datD, reps = 500, output_reps = 500)
-
+head(lambdaD)
+extD<- quasiextinction(data = datD, 
+                       reps = 500,
+                       years = 100,
+                       output_reps = 500)
+extD
 
 tm<- Sys.time()
 datP<- project_pop(inputs = inps,
-                  t_final=200,
-                  reps=500,
-                  run_type = "Partitioned")
+                  t_final=150,
+                  reps=200,
+                  run_type = "Partitioned",
+                  save_path = FALSE)
 Sys.time()-tm
 lambdaP<- growth_rate(data = datP)
-extP<- quasiextinction(data = datP, reps = 500, output_reps = 500)
+head(lambdaP)
+extP<- quasiextinction(data = datP, 
+                       reps = 150, 
+                       output_reps = 200,
+                       years = 100)
+extP
 
 tm<- Sys.time()
 datU<- project_pop(inputs = inps,
-                   t_final=200,
-                   reps=500,
-                   run_type = "Unpartitioned")
+                   t_final=150,
+                   reps=200,
+                   run_type = "Unpartitioned",
+                   save_path = FALSE)
 Sys.time()-tm
 lambdaU<- growth_rate(data = datU)
-extU<- quasiextinction(data = datU, reps = 500, output_reps = 500)
+head(lambdaU)
+extU<- quasiextinction(data = datU, 
+                       reps = 200, 
+                       output_reps = 200,
+                       years=100)
+extU
 
 
 lambda<- rbind(lambdaD, lambdaP)
@@ -340,20 +373,7 @@ ext<- rbind(extD$ext_table, extU$ext_table)
 ext<- rbind(ext, extP$ext_table)
 
 
-boundaries<- function(pop_data=NULL)
-{
-  
-}
 
-reproductive_value<- function(pop_data=NULL)
-{
-  
-}
-
-stable_age0<- function(pop_data=NULL)
-{
-  
-}
   #  ## DETERMINISTIC OUTPUTS
   #   Li<- inputs$Linf*(1-exp(-1*inputs$k*(1:inputs$max_age-inputs$t0)))
   #   Ei<- inputs$fec_b0+inputs$fec_b1*Li
