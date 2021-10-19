@@ -82,7 +82,7 @@ surv_and_mat_from_stage<- function(max_age=41, # MAXIMUM FEMALE AGE OF REPRODUCT
   ### PROBABILITY OF BEING IN EACH STAGE BY AGE
   p_stage<- lapply(c("vbgf", "ln_vbgf"), function(x)
   {
-    age<- 3:max_age
+    age<- 3:(max_age+1)
     if(x=="vbgf")
     {
       La<- growth$vbgf$Linf*(1-exp(-growth$vbgf$k*(age-growth$vbgf$t0)))
@@ -128,6 +128,7 @@ surv_and_mat_from_stage<- function(max_age=41, # MAXIMUM FEMALE AGE OF REPRODUCT
       (p_stage$vbgf$age1[i-1]*stage$phi_1 + p_stage$vbgf$juv[i-1]*stage$phi_juv + 
          p_stage$vbgf$subA[i-1]*stage$phi_sa + p_stage$vbgf$adult[i-1]*stage$phi_adult)
   })
+  m[m<0]<-0
   m_i$vbgf<- c(0, m)
   ### MATURATION FROM MEC LN_VBGF FIT
   m<- sapply(2:length(p_stage$ln_vbgf$adult), function(i)

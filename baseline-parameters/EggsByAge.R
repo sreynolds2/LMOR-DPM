@@ -46,9 +46,10 @@ eggs<- function(fork_length=NULL,
 ## SIMULATE FECUNDITY BY AGE
 fecundity_sim<- function(n=1000000,
                          inputs=NULL,
-                         run_type="ln_vbgf")
+                         run_type="ln_vbgf",
+                         a_min=1)
 {
-  a=1:inputs$max_age
+  a=a_min:inputs$max_age
   fec<- lapply(a, function(x)
   {
     lengths<- length_at_age(age=x, reps=n, inputs = inputs, type=run_type)
@@ -176,4 +177,26 @@ if(exists("new_egg_sim"))
               row.names = FALSE)
   }
 }
+
+
+# ## GENERATE PARAMETER VALUES FOR MAXIMUM AGES BETWEEN 
+# ## 42 AND 66
+# params<- readRDS("./baseline-parameters/default-parameters.rds")
+# params$max_age<- 66
+# run_type<- c("ln_vbgf", "vbgf")
+# add_on_eggs<- invisible(lapply(run_type, function(t)
+# {
+#   out<- fecundity_sim(n=2000000,
+#                       inputs=params,
+#                       run_type=t,
+#                       a_min=42)
+#   E<- read.csv(paste0("./baseline-parameters/fecundity_estimates_by_age_", t, 
+#                       "_2mil.csv"))
+#   E<- rbind(E, out)
+#   write.csv(E, paste0("./baseline-parameters/fecundity_estimates_by_age_", t,
+#                       "_2mil.csv"), row.names = FALSE)
+# }))
+
+
+
 

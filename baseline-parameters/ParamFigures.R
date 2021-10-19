@@ -1,5 +1,5 @@
 
-source("./R/0_baseline-parameterization.r")
+inputs<- readRDS("./baseline-parameters/default-parameters.rds")
 
 # FIGURES
 ## SURVIVAL
@@ -108,4 +108,23 @@ legend("bottomright", c("Eggs from All Fish", "Eggs from Adults Weighted by Prop
 
 rm(dat, mean_fl, sd_fl, fit, intrcpt, slp, disp, n, a, fec_vbgf, fecundity_vbgf,
    fec_ln, fecundity_ln, length_at_age, eggs, age)
+
+
+#### ADDITIONAL EGGS
+E2<- read.csv("./baseline-parameters/fecundity_estimates_by_age_vbgf_2mil.csv")
+E<- read.csv("./baseline-parameters/fecundity_estimates_by_age_ln_vbgf_2mil.csv")
+inps<- list()
+inps$max_age<- 66
+inps$a_min<- 8
+##### AVERAGE FECUNDITY PER SPAWNER
+age<-1:66
+plot(age, c(rep(-10000,inps$a_min-1), 
+            E$Mean_Eggs_Adults[inps$a_min:inps$max_age]), ylim=c(0,35000),
+     xlab="Age", ylab="Mean Number of Eggs per Spawning Female", col="blue", pch=19)
+points(age, c(rep(-10000,inps$a_min-1), 
+              E2$Mean_Eggs_Adults[inps$a_min:inps$max_age]), pch=19)
+legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)"), col=c("black", "blue"), 
+       pch=19, bty="n")
+
+
 
