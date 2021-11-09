@@ -49,7 +49,7 @@ fecundity_sim<- function(n=1000000,
                          run_type="ln_vbgf",
                          a_min=1)
 {
-  a=a_min:inputs$max_age
+  a=a_min:(inputs$max_age+1)
   fec<- lapply(a, function(x)
   {
     lengths<- length_at_age(age=x, reps=n, inputs = inputs, type=run_type)
@@ -197,6 +197,19 @@ if(exists("new_egg_sim"))
 #                       "_2mil.csv"), row.names = FALSE)
 # }))
 
-
-
+# ## FECUNDITY WITH NO LOWER LENGTH BOUND ON MATURATION
+# inputs<- readRDS("./baseline-parameters/phi_mi_fec.rds")
+# inputs$phi<- NULL
+# inputs$m_i<- NULL
+# inputs$stage$min_adult_length<- 0
+# E_vbgf<- fecundity_sim(n=2000000,
+#                        inputs=inputs,
+#                        run_type = "vbgf")
+# write.csv(E_vbgf, "./baseline-parameters/fecundity_estimates_by_age_no_LB_vbgf.csv",
+#           row.names = FALSE)
+# E_ln<- fecundity_sim(n=2000000,
+#                      inputs=inputs,
+#                      run_type = "ln_vbgf")
+# write.csv(E_ln, "./baseline-parameters/fecundity_estimates_by_age_no_LB_ln_vbgf.csv",
+#           row.names = FALSE)
 

@@ -26,6 +26,8 @@ create_params<- function(max_age=41, # MAXIMUM FEMALE AGE OF REPRODUCTION
                          phi0=0.000075,
                          # SEX RATIO
                          probF=0.5,
+                         # RR SPAWNING PROPORTION
+                         gamma=1,
                          # REPRODUCTIVE PERIOD
                          max_period=5,
                          probs=c(0, 8/21, 13/21*3/5),
@@ -146,6 +148,8 @@ create_params<- function(max_age=41, # MAXIMUM FEMALE AGE OF REPRODUCTION
   names(inps$eggs)<- growth_fit_type
   ## AGE-0 SURVIVAL
   inps$phi0<- phi0
+  ## PROPORTION OF REPRODUCTIVELY READY FEMALES THAT SPAWN
+  inps$gamma<- gamma
   # SAVE PARAMETERS
   saveRDS(inps, paste0("./output/parameterizations/parameters_",
                        input_id, ".rds"))
@@ -423,11 +427,11 @@ matrix_eigen_analysis<- function(inputs,
                                  growth_type="vbgf")
 {
   # ERROR HANDLING
-  if(!all(sapply(c("max_age", "phi", "psi", "eggs", "probF", "phi0"), 
+  if(!all(sapply(c("max_age", "phi", "psi", "eggs", "probF", "gamma", "phi0"), 
                  exists, where=inputs)))
   {
     return(print("The inputs file must contain all of the following:
-                  'max_age', 'phi', 'psi', 'eggs', 'probF', 'phi0_MR'."))
+                  'max_age', 'phi', 'psi', 'eggs', 'probF', 'gamma', 'phi0_MR'."))
   }
   if(!(exists(growth_type, where=inputs$phi) & 
        exists(growth_type, where=inputs$psi) & 
@@ -440,13 +444,14 @@ matrix_eigen_analysis<- function(inputs,
   phi<- inputs$phi[[growth_type]]
   psi<- inputs$psi[[growth_type]]
   eggs<- inputs$eggs[[growth_type]]
+  gamma<- inputs$gamma
   sexratio<- inputs$probF
   phi0<- inputs$phi0
-  if(!(all(sapply(c(max_age, sexratio, phi0), 
+  if(!(all(sapply(c(max_age, sexratio, phi0, gamma), 
                   length)==1) & 
-       is.numeric(c(max_age, sexratio, phi0))))
+       is.numeric(c(max_age, sexratio, phi0, gamma))))
   {
-    return(print("Inputs 'max_age', 'probF', and 'phi0' should all be numerical values of length 1."))
+    return(print("Inputs 'max_age', 'probF', 'gamma', and 'phi0' should all be numerical values of length 1."))
   }
   if(!all(c(length(psi), length(eggs))>=max_age+1))
   {
@@ -467,11 +472,11 @@ matrix_eigen_analysis<- function(inputs,
   ## SURVIVAL VALUES
   A[cbind(2:max_age,1:(max_age-1))]<- phi
   ## FERTILITY VALUES
-  A[1,] <- psi*eggs*sexratio*phi0
+  A[1,] <- psi*gamma*eggs*sexratio*phi0
   Aminus<- A[1:(max_age-1), 1:(max_age-1)]
   Aplus<- rbind(A, c(rep(0, max_age-1), phi_plus))
   Aplus<- cbind(Aplus, 
-                c(psi_plus*eggs_plus*sexratio*phi0, rep(0, max_age)))
+                c(psi_plus*gamma*eggs_plus*sexratio*phi0, rep(0, max_age)))
   
   # EIGENANALYSIS 
   ea<- eigen.analysis(A)
@@ -489,9 +494,10 @@ matrix_eigen_analysis<- function(inputs,
   ea$sensitivities$psi<- sens[1,]*eggs*sexratio*phi0
   # ANALYZE A_MAT_H, K_MAT, AND RR PERIOD PROBS HERE...USE "INPUTS" 
   # AS FUNCTION INPUT
-  ea$sensitivities$eggs<- sens[1,]*psi*sexratio*phi0
-  ea$sensitivities$sexratio<- sum(sens[1,]*psi*eggs*phi0)
-  ea$sensitivities$phi0<- sum(sens[1,]*psi*eggs*sexratio)
+  ea$sensitivities$gamma<- sum(sens[1,]*psi*eggs*sexratio*phi0)
+  ea$sensitivities$eggs<- sens[1,]*psi*gamma*sexratio*phi0
+  ea$sensitivities$sexratio<- sum(sens[1,]*psi*gamma*eggs*phi0)
+  ea$sensitivities$phi0<- sum(sens[1,]*psi*gamma*eggs*sexratio)
   ea_minus<- eigen.analysis(Aminus)
   ea_plus<- eigen.analysis(Aplus)
   ea$sensitivities$max_age<- (ea_plus$lambda1-ea_minus$lambda1)/2
@@ -503,6 +509,7 @@ matrix_eigen_analysis<- function(inputs,
   rm(elas)
   ea$elasticities$phi<- ea$sensitivities$phi*phi/ea$lambda1
   ea$elasticities$psi<- ea$sensitivities$psi*psi/ea$lambda1
+  ea$elasticities$gamma<- ea$sensitivities$gamma*gamma/ea$lambda1
   ea$elasticities$eggs<- ea$sensitivities$eggs*eggs/ea$lambda1
   ea$elasticities$sexratio<- ea$sensitivities$sexratio*sexratio/ea$lambda1
   ea$elasticities$phi0<- ea$sensitivities$phi0*phi0/ea$lambda1
@@ -568,10 +575,10 @@ boundary_vals<- function(inputs=NULL,
                          growth_type="vbgf")
 {
   # ERROR HANDLING
-  if(!all(sapply(c("max_age", "phi", "psi", "eggs", "probF"), exists, where=inputs)))
+  if(!all(sapply(c("max_age", "phi", "psi", "gamma", "eggs", "probF"), exists, where=inputs)))
   {
     return(print("The inputs file must contain all of the following:
-                 'max_age', 'phi', 'psi', 'eggs', 'probF'."))
+                 'max_age', 'phi', 'psi', 'gamma', 'eggs', 'probF'."))
     
   }
   if(!(exists(growth_type, where=inputs$phi) & 
@@ -584,12 +591,13 @@ boundary_vals<- function(inputs=NULL,
   max_age<- inputs$max_age  
   phi<- inputs$phi[[growth_type]]
   psi<- inputs$psi[[growth_type]]
+  gamma<- inputs$gamma
   eggs<- inputs$eggs[[growth_type]]
   sexratio<- inputs$probF
-  if(!(all(sapply(c(max_age, sexratio),length)==1) &
-       is.numeric(c(max_age, sexratio))))
+  if(!(all(sapply(c(max_age, gamma, sexratio),length)==1) &
+       is.numeric(c(max_age, gamma, sexratio))))
   {
-    return(print("Inputs 'max_age' and 'probF' should be numerical values of length 1."))
+    return(print("Inputs 'max_age', 'gamma', and 'probF' should be numerical values of length 1."))
   }
   if(!all(c(length(psi), length(eggs))>=max_age))
   {
@@ -608,10 +616,10 @@ boundary_vals<- function(inputs=NULL,
   # REARRANGE EULER-LOTKA EQUATION FOR CHARACTERISTIC EQUATION WITH LAMBDA=1
   denom<- sapply(2:length(psi), function(i)
   {
-    out<- psi[i]*eggs[i]*sexratio*prod(phi[1:(i-1)])
+    out<- psi[i]*gamma*eggs[i]*sexratio*prod(phi[1:(i-1)])
     return(out)
   })
-  denom<- c(psi[1]*eggs[1]*sexratio, denom) 
+  denom<- c(psi[1]*gamma*eggs[1]*sexratio, denom) 
   phi0<- 1/sum(denom)
   ## PRODUCT VALUE FOR AGE0, AGE1, SEXRATIO CURVES
   denom2<- sapply(3:length(psi), function(i)
@@ -620,10 +628,10 @@ boundary_vals<- function(inputs=NULL,
     return(out)
   })
   denom2<- c(psi[2]*eggs[2], denom2)
-  prod<- sexratio*phi0*phi[1]
+  prod<- gamma*sexratio*phi0*phi[1]
   B1<- sum(denom2)
   check2<- round(abs(prod-1/B1),14)
-  if(psi[1]*eggs[1]!=0){check2<- "FAILED"}
+  if(psi[1]*gamma*eggs[1]!=0){check2<- "FAILED"}
   
   # CHECK LAMBDA=1 IS THE LARGEST E-VALUE
   ## BUILD LESLIE MATRIX
@@ -631,7 +639,7 @@ boundary_vals<- function(inputs=NULL,
   ### SURVIVAL VALUES
   A[cbind(2:max_age,1:(max_age-1))]<- phi
   ### FERTILITY VALUES
-  A[1,] <- psi*eggs*sexratio*phi0
+  A[1,] <- psi*gamma*eggs*sexratio*phi0
   ## EIGENANALYSIS 
   ea<- eigen.analysis(A)
   check<- round(abs(ea$lambda1-1),14)
@@ -668,6 +676,7 @@ phi0_phi1_sexratio_curves<- function(boundary_inputs=NULL,
   maxage<- boundary_inputs$max_age
   phi<- boundary_inputs$phi
   psi<- boundary_inputs$psi
+  gamma<- boundary_inputs$gamma
   eggs<- boundary_inputs$eggs
   sexratio<- probF
   prod<-boundary_inputs$boundary$product
@@ -677,10 +686,10 @@ phi0_phi1_sexratio_curves<- function(boundary_inputs=NULL,
     return(print("Values of 'probF' greater than 0 and less than or equal to 1
                  must be specified."))
   }
-  if(!(all(sapply(c(maxage, prod), length)==1) &
-       is.numeric(c(maxage, prod))))
+  if(!(all(sapply(c(maxage, gamma, prod), length)==1) &
+       is.numeric(c(maxage, gamma, prod))))
   {
-    return(print("Boundary inputs 'maxage' and 'boundary$product' should both be numerical values of length 1."))
+    return(print("Boundary inputs 'maxage', 'gamma', and 'boundary$product' should both be numerical values of length 1."))
   }
   if(!all(c(length(psi), length(eggs))==maxage))
   {
@@ -693,7 +702,7 @@ phi0_phi1_sexratio_curves<- function(boundary_inputs=NULL,
   curve_dat<- lapply(sexratio, function(r)
   {
     phi1<- c(0.000001,seq(0.01, 1, 0.01))
-    phi0<- prod/(r*phi1)
+    phi0<- prod/(gamma*r*phi1)  
     indx<- which(phi0>1)
     if(length(indx)>0)
     {
@@ -707,8 +716,9 @@ phi0_phi1_sexratio_curves<- function(boundary_inputs=NULL,
     out<-NULL
     if(length(phi0>0))
     {
-      out<-data.frame(phi1=phi1, phi0=phi0, probF=r, 
-                      growth_type=boundary_inputs$boundary$growth_type)
+      out<-data.frame(phi1=phi1, phi0=phi0, probF=r, gamma=gamma, 
+                      growth_type=boundary_inputs$boundary$growth_type,
+                      curve_type="sex ratio")
     }
     return(out)
   })
@@ -717,17 +727,93 @@ phi0_phi1_sexratio_curves<- function(boundary_inputs=NULL,
 }
 
 
+phi0_phi1_atresia_curves<- function(boundary_inputs=NULL,
+                                    atresia_prop=c(0.1,1,0.1))
+{
+  # ERROR HANDLING
+  if(!all(sapply(c("product", "check2"), exists, where=boundary_inputs$boundary)))
+  {
+    return(print("Boundary inputs must contain the list boundary with entries 'product' and 'check2'."))
+  }
+  if(boundary_inputs$boundary$check2!=0)
+  {
+    return(print("Boundary check failed."))
+  }
+  if(!all(sapply(c("max_age", "phi", "psi", "eggs","gamma", "probF"), exists, where=boundary_inputs)))
+  {
+    return(print("The boundary_inputs file must contain all of the following:
+                 'max_age', 'phi', 'psi', 'eggs', 'gamma', 'probF'."))
+  }
+  maxage<- boundary_inputs$max_age
+  phi<- boundary_inputs$phi
+  psi<- boundary_inputs$psi
+  gamma<- 1-atresia_prop
+  eggs<- boundary_inputs$eggs
+  probF<- boundary_inputs$probF
+  prod<-boundary_inputs$boundary$product
+  if(any(gamma<=0 | gamma>1)){gamma<- gamma[-which(gamma<=0 | gamma>1)]}
+  if(length(gamma)==0)
+  {
+    return(print("Values of 'atresia_prop' greater than 0 and less than or equal to 1
+                 must be specified."))
+  }
+  if(!(all(sapply(c(maxage, probF, prod), length)==1) &
+       is.numeric(c(maxage, probF, prod))))
+  {
+    return(print("Boundary inputs 'maxage', 'probF', and 'boundary$product' should both be numerical values of length 1."))
+  }
+  if(!all(c(length(psi), length(eggs))==maxage))
+  {
+    return(print("Boundary inputs 'psi' and 'eggs' need to be a vector of length 'maxage' (one value for each age)."))
+  }
+  if(length(phi)!=maxage-1)
+  {
+    return(print("Boundary input 'phi' needs to be a vector of survivals with length maxage-1."))
+  }
+  curve_dat<- lapply(gamma, function(g)
+  {
+    phi1<- c(0.000001,seq(0.01, 1, 0.01))
+    phi0<- prod/(g*probF*phi1)
+    indx<- which(phi0>1)
+    if(length(indx)>0)
+    {
+      phi0<- phi0[-indx]
+      phi1<- phi1[-indx]
+    }
+    #SYMMETRICAL SO CAN EXPAND
+    tmp<- phi0
+    phi0<- c(phi0, phi1)
+    phi1<- c(phi1, tmp)
+    out<-NULL
+    if(length(phi0>0))
+    {
+      out<-data.frame(phi1=phi1, phi0=phi0, gamma=g, probF=probF, 
+                      growth_type=boundary_inputs$boundary$growth_type,
+                      curve_type="atresia")
+    }
+    return(out)
+  })
+  curve_dat<- do.call(rbind, curve_dat)
+  return(curve_dat)
+}
+
 ## PLOT BOUNDARY CURVES IN SURVIVAL-SEXRATIO SPACE
 plot_boundary_curves<- function(curve_dat=NULL,
+                                curve_type="atresia",
                                 phi0_upper=0.001,
                                 phi1_upper=0.8,
                                 xlabel=expression(paste("Age-1 Survival Probability  (", phi[1], ")")),
                                 ylabel=expression(paste("Age-0 Survival Probability  (  ", phi[0], ")")),
                                 xaxis="s")
 {
-
+  curve_dat<- subset(curve_dat, curve_type==curve_type)
+  if(nrow(curve_dat==0))
+  {
+    return(print("No curve data of the specified type available."))
+  }
   gt<- unique(curve_dat$growth_type)
   cdat<- subset(curve_dat, growth_type==gt[1])
+  
   probF<-unique(cdat$probF)
   probF<- probF[order(probF)]
   tmp<-cdat[which(cdat$probF==probF[1]),]
@@ -760,7 +846,6 @@ plot_boundary_curves<- function(curve_dat=NULL,
     g_lab<- ifelse(gt=="vbgf", "JAGS VBGF", "TMB LN(VBGF)")
     legend("topright", g_lab, lty=c(1,2), bty='n')
   }
-  abline(0.0004, 0, col="lightgray")
 }
 
 

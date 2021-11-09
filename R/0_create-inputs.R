@@ -44,7 +44,7 @@ inps$ub$mat_age<- params$max_age
   ### MATURATION, AND PSI VALUES
 ## PROPORTION SPAWNING
 ### JAGS VBGF FIT
-inps$vbgf$mu$p_spawn<- params$psi$vbgf
+inps$vbgf$mu$p_spawn<- params$psi$vbgf*params$gamma
 inps$vbgf$sd$p_spawn<- rep(0, length(params$psi$vbgf))
 inps$vbgf$sd_temp$p_spawn<- rep(0, length(params$psi$vbgf))
 inps$vbgf$lb$p_spawn<- rep(0, length(params$psi$vbgf))

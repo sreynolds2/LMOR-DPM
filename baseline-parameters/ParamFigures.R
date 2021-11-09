@@ -37,28 +37,30 @@ legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)"), col=c("black", "blue"),
 #        pch=19, bty="n")
 #### MATURATION AGE
 age<-1:41
-plot(age, inputs$m_i$FSM, col="green", xlab="Age", ylab="Probability of Maturing", pch=19, type="b")
-points(age, inputs$m_i$ln_vbgf, col="blue", pch=19, type="b")
-points(age, inputs$m_i$vbgf, pch=19, type="b")
-legend("topright", c("JAGS VBGF", "TMB LN(VBGF)", "FSM"), 
+plot(age, inputs$m_i$FSM[1:41], col="green", xlab="Age", ylab="Probability of Maturing", pch=19, type="b")
+points(age, inputs$m_i$ln_vbgf[1:41], col="blue", pch=19, type="b")
+points(age, inputs$m_i$vbgf[1:41], pch=19, type="b")
+legend("topright", c("JAGS VBGF", "TMB LN(VBGF)", "2019 FSM"), 
        col=c("black", "blue", "green"), lty=1, pch=19, bty="n")
 #### PROPORTION OF REPRODUCTIVELY READY FEMALES
 age<-1:41
-plot(age, inputs$psi$FSM, col="green", xlab="Age", ylab="Proportion of Gravid Females", 
+plot(age, inputs$psi$FSM[1:41], col="green", xlab="Age", ylab="Proportion of Gravid Females", 
      pch=19, type="b")
-points(age, inputs$psi$ln_vbgf, col="blue", pch=19, type="b")
-points(age, inputs$psi$vbgf, pch=19, type="b")
-legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)", "FSM"), 
+points(age, inputs$psi$ln_vbgf[1:41], col="blue", pch=19, type="b")
+points(age, inputs$psi$vbgf[1:41], pch=19, type="b")
+legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)", "2019 FSM"), 
        col=c("black", "blue", "green"), pch=19, lty=1, bty="n")
 #### AVERAGE FECUNDITY PER FEMALE
 age<-1:41
-plot(age, inputs$psi$FSM*inputs$eggs$ln_vbgf, xlab="Age", ylab="Eggs per Female", 
+plot(age, inputs$psi$FSM[1:41]*inputs$eggs$ln_vbgf[1:41], xlab="Age", ylab="Eggs per Female", 
      col="lightblue", pch=19, type="b")
-points(age, inputs$psi$FSM*inputs$eggs$vbgf, col="gray", pch=19, type="b")
-points(age, inputs$psi$vbgf*inputs$eggs$vbgf, pch=19, type="b")
-points(age, inputs$psi$ln_vbgf*inputs$eggs$ln_vbgf, col="blue", pch=19, type="b")
-legend("bottomright", c("JAGS VBGF", "TMB LN(VBGF)", "FSM Maturation + JAGS VBGF", 
-                        "FSM Maturation + TMB LN(VBGF)"), 
+points(age, inputs$psi$FSM[1:41]*inputs$eggs$vbgf[1:41], col="gray", pch=19, type="b")
+points(age, inputs$psi$vbgf[1:41]*inputs$eggs$vbgf[1:41], pch=19, type="b")
+points(age, inputs$psi$ln_vbgf[1:41]*inputs$eggs$ln_vbgf[1:41], col="blue", pch=19, type="b")
+legend("bottomright", c("JAGS VBGF Maturation & Growth", 
+                        "TMB LN(VBGF) Maturation & Growth", 
+                        "2019 FSM Maturation + JAGS VBGF Growth", 
+                        "2019 FSM Maturation + TMB LN(VBGF) Growth"), 
        col=c("black", "blue", "gray", "lightblue"), pch=19, bty="n")
 
 
