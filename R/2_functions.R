@@ -431,7 +431,7 @@ matrix_eigen_analysis<- function(inputs,
                  exists, where=inputs)))
   {
     return(print("The inputs file must contain all of the following:
-                  'max_age', 'phi', 'psi', 'eggs', 'probF', 'gamma', 'phi0_MR'."))
+                  'max_age', 'phi', 'psi', 'eggs', 'probF', 'gamma', 'phi0'."))
   }
   if(!(exists(growth_type, where=inputs$phi) & 
        exists(growth_type, where=inputs$psi) & 
@@ -851,108 +851,7 @@ plot_boundary_curves<- function(curve_dat=NULL,
 }
 
 
-
-# 7. 
-## INITIAL POPULATION
-### THIS WAS TAKEN FROM THE FORT PECK FLOWS REPOSITORY AND HAS NOT BEEN
-### UPDATED FOR THE LOWER RIVER; MIGHT BE USEFUL TO DO SOMETHING SIMILAR
-### BUT WILL REMOVE TO ELIMINATE CONFUSION
-initialize_pop<- function(inputs=NULL,
-                          gamma_hist=1,
-                          phi0_MR_hist=0.000186,
-                          stable_age=FALSE,
-                          boom_prob=1/5,
-                          bust_prob=1/5,
-                          boom_recruits=25000,
-                          bust_recruits=0,
-                          avg_recruits=1000,
-                          initial_adults=5000,
-                          exact=TRUE)
-{
-  # ERROR CHECK
-  if(stable_age & (length(initial_adults)!=1 | initial_adults<=0))
-  {
-    return(print("For a 'stable_age' generation of the initial population, a single
-                  positive value for 'initial_adults' must be specified."))
-  }
-  if(!stable_age)
-  {
-    if(!all(sapply(c(boom_prob, bust_prob, boom_recruits, bust_recruits,
-                     avg_recruits), length)==1))
-    {
-      return(print("For a random generation of the initial population, a single
-                   positive value for each of 'boom_prob', 'bust_prob', 
-                   'boom_recruits', 'bust_recruits', 'avg_recruits' must be 
-                   specified."))
-    }
-    if(boom_prob+bust_prob>1)
-    {
-      return(print("The sum of 'boom_prob' and 'bust_prob' must be between 0 and 1."))
-    }
-  }
-  ## RECORD NEW INPUTS
-  inits<- list()
-  inits$inputs_id<- inputs$id
-  inits$gamma_historical<- gamma_hist
-  inits$phi0_historical<- phi0_MR_hist
-  inits$stable_age<- stable_age
-  inits$exact<- exact
-  if(!stable_age)
-  {
-    inits$boom_prob<- boom_prob
-    inits$bust_prob<- bust_prob
-    inits$boom_recruits<- boom_recruits
-    inits$bust_recruits<- bust_recruits
-    inits$avg_recruits<- avg_recruits
-  }
-  if(stable_age)
-  {
-    inits$initial_adults<- initial_adults
-  }
-  ## CREATE INITIAL AGE DISTRIBUTION BY PROJECTIONS OF RANDOM BOOM/BUST YEARS
-  if(!stable_age)
-  {
-    year_type<- rmultinom(inputs$max_age, 1, 
-                          c(bust_prob, 1-bust_prob-boom_prob, boom_prob))
-    vals<- c(bust_recruits, avg_recruits, boom_recruits)
-    N0<- c(vals%*%year_type)
-    for(i in 2:60)
-    {
-      N0[i]<- N0[i]*prod(inputs$phi[1:(i-1)])
-    }
-    if(!exact)
-    {
-      N0<- round(N0)
-    }
-  }
-  ## CREATE INITIAL AGE DISTRIBUTION AT ASSUMED HISTORICAL STEADY AGE DISTRIBUTION
-  if(stable_age)
-  {
-    # BUILD HISTORICAL LESLIE MATRIX
-    A<- matrix(0,inputs$max_age,inputs$max_age)
-    ## SURVIVAL VALUES
-    A[cbind(2:inputs$max_age,1:(inputs$max_age-1))]<- inputs$phi
-    ## FERTILITY VALUES
-    A[1,] <- inputs$psi*gamma_hist*inputs$eggs*inputs$probF*phi0_MR_hist 
-    # HISTORICAL EIGENANALYSIS
-    ea<- eigen.analysis(A)
-    initial_num<- initial_adults/sum(ea$stable.age[inputs$mat$a_h:inputs$max_age])
-    if(exact)
-    {
-      N0<-ea$stable.age*initial_num
-    }
-    if(!exact)
-    {
-      N0<- c(rmultinom(1, initial_num-initial_adults, 
-                       ea$stable.age[1:(inputs$mat$a_h-1)]),
-             rmultinom(1, initial_adults, 
-                       ea$stable.age[inputs$mat$a_h:inputs$max_age]))
-    }
-  }
-  inits$N0<- N0
-  return(inits)
-}  
-
+################################################
 
 reproductive_value<- function(pop_data=NULL)
 {

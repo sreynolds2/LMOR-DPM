@@ -10,7 +10,7 @@ ea_vbgf<- matrix_eigen_analysis(inputs=params,
 ea_ln<- matrix_eigen_analysis(inputs=params,
                               growth_type="ln_vbgf")
 ea<- list(vbgf=ea_vbgf, ln_vbgf=ea_ln)
-saveRDS(ea, "./output/baseline-matrix-results.r")
+saveRDS(ea, "./output/baseline-matrix-results.rds")
 
 ### SENSITIVITIES AND ELASTICITIES
 tbl_vbgf<- sens_elas_table(ea_vbgf)

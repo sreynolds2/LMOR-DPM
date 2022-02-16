@@ -86,6 +86,10 @@ rm(E)
 ## AGE-0 SURVIVAL
 params$phi0<- 0.000075
 
+## SPAWNING PROBABILITY
+### 1 - ATRESIA RATE
+params$gamma<- 1
+
 saveRDS(params, "./baseline-parameters/default-parameters.rds")
 saveRDS(params, "./output/parameterizations/default-parameters.rds")
 
