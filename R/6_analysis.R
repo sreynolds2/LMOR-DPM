@@ -50,17 +50,23 @@ c_ln<- phi0_phi1_sexratio_curves(bp_ln,
 c_dat<- rbind(c_vbgf, c_ln)
 
 plot_boundary_curves(c_dat,
+                     #curve_type = "sex ratio",  ## HAD ISSUES GETTING THIS TO WORK 2nd TIME AROUND (SEE 2_functions.R)
                      phi1_upper = 0.96)
 ## ADD UPPER BOUND FOR AGE-0 SURVIVAL FROM PINE ET AL. 2001 
 abline(0.0004, 0, col="lightgray")
 ## ADD STEFFENSEN ET AL. (2013) STABILITY POINTS
 points(0.686, 0.00011, pch=17)
 ## ADD WILDHABER ET AL. (2017) STABILITY POINTS
-points(0.3674,0.00011, pch=19)
-legend(0.73, 0.0009, c("Steffensen et al. 2013", "Wildhaber et al. 2017"),
-       pch=c(17,19), bty='n')
+points(0.3674,0.00011, pch=25, bg="black", cex=0.8)
+## ADD JAGS VBGF STABILITY POINT
+points(0.151,0.0003833609, pch=15)
+## ADD TMB ln(VBGF) STABILITY POINT
+points(0.151,0.0005066825, pch=19)
+legend(0.73, 0.0009, c("Steffensen et al. 2013", "Wildhaber et al. 2017",
+                       "JAGS VBGF Age-0", "TMB ln(VBGF) Age-0"),
+       pch=c(17,25, 15, 19), pt.bg="black", pt.cex=c(1,0.8,1,1), bty='n')
 
-
+points(0.2, 0.00035, pch=8, col="blue")
 ### UNLINKING SURVIVAL AND MATURATION FROM GROWTH
 inps2<- params
 inps2$phi$vbgf<- c(0.686, rep(0.922, inps2$max_age))

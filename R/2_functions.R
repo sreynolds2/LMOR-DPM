@@ -798,19 +798,21 @@ phi0_phi1_atresia_curves<- function(boundary_inputs=NULL,
 }
 
 ## PLOT BOUNDARY CURVES IN SURVIVAL-SEXRATIO SPACE
+### HAVING ISSUES WITH COMMENTED OUT PORTION -- WAS WORKING< NOT SURE
+### WHY IT DIDN'T RECENTLY; MAY NEED SOME FIXING
 plot_boundary_curves<- function(curve_dat=NULL,
-                                curve_type="atresia",
+                                #curve_type="atresia",
                                 phi0_upper=0.001,
                                 phi1_upper=0.8,
                                 xlabel=expression(paste("Age-1 Survival Probability  (", phi[1], ")")),
                                 ylabel=expression(paste("Age-0 Survival Probability  (  ", phi[0], ")")),
                                 xaxis="s")
 {
-  curve_dat<- subset(curve_dat, curve_type==curve_type)
-  if(nrow(curve_dat==0))
-  {
-    return(print("No curve data of the specified type available."))
-  }
+  #curve_dat<- subset(curve_dat, curve_type==curve_type)
+  #if(nrow(curve_dat==0))
+  #{
+  #  return(print("No curve data of the specified type available."))
+  #}
   gt<- unique(curve_dat$growth_type)
   cdat<- subset(curve_dat, growth_type==gt[1])
   
@@ -852,6 +854,9 @@ plot_boundary_curves<- function(curve_dat=NULL,
 
 # 7. 
 ## INITIAL POPULATION
+### THIS WAS TAKEN FROM THE FORT PECK FLOWS REPOSITORY AND HAS NOT BEEN
+### UPDATED FOR THE LOWER RIVER; MIGHT BE USEFUL TO DO SOMETHING SIMILAR
+### BUT WILL REMOVE TO ELIMINATE CONFUSION
 initialize_pop<- function(inputs=NULL,
                           gamma_hist=1,
                           phi0_MR_hist=0.000186,
