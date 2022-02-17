@@ -1,3 +1,14 @@
+#######################################################################
+#                                                                     #
+#   WARNING: THIS CODE WAS IN THE PROCESS OF BEING CONVERTED FROM     #
+#            A UMOR FUNCTION.  THEREFORE IT MAY CONTAIN SOME UMOR     #
+#            VALUES THAT NEED TO BE CHANGED TO LMOR VALUES, OR        #
+#            STEPS NOT RELEVANT TO THE LMOR THAT REQUIRE UPDATES.     #
+#            PLEASE DOUBLE CHECK AND UPDATE THIS CODE BEFORE USE.     #
+#                                                                     #
+#######################################################################
+
+
 # GENERATE INITIAL POPULATION
 init_pop<- function(inputs=NULL,
                     type=NULL) # "Uniform" OR "2020_PSPAP"

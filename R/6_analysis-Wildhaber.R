@@ -281,6 +281,10 @@ quasiextinction<- function(data=NULL,
   {
     output_frac<- frac*reps/output_reps
   }
+  if(output_reps>reps)
+  {
+    return(print("ouput_reps must be less than or equal to reps"))
+  }
   # TIME TO 50%
   time_fifty<- ifelse(output_frac[output_yr]>=0.5,
                       min(which(output_frac>=0.5)),
@@ -319,7 +323,7 @@ tm<- Sys.time()
 datD<- project_pop(inputs = inps,
                    #growth_type = "vbgf",
                    t_spin=0,
-                   t_final=150,
+                   t_final=250,
                    reps=2000,
                    run_type = "Deterministic",
                    save_path = FALSE)
@@ -330,38 +334,38 @@ lambdaD<- growth_rate(data = datD,
 head(lambdaD)
 extD<- quasiextinction(data = datD, 
                        reps = 500,
-                       years = 100,
+                       years = 200,
                        output_reps = 500)
 extD
 
 tm<- Sys.time()
 datP<- project_pop(inputs = inps,
-                  t_final=150,
-                  reps=200,
+                  t_final=250,
+                  reps=500,
                   run_type = "Partitioned",
                   save_path = FALSE)
 Sys.time()-tm
 lambdaP<- growth_rate(data = datP)
 head(lambdaP)
 extP<- quasiextinction(data = datP, 
-                       reps = 150, 
-                       output_reps = 200,
-                       years = 100)
+                       reps = 500, 
+                       output_reps = 500,
+                       years = 200)
 extP
 
 tm<- Sys.time()
 datU<- project_pop(inputs = inps,
-                   t_final=150,
-                   reps=200,
+                   t_final=250,
+                   reps=500,
                    run_type = "Unpartitioned",
                    save_path = FALSE)
 Sys.time()-tm
 lambdaU<- growth_rate(data = datU)
 head(lambdaU)
 extU<- quasiextinction(data = datU, 
-                       reps = 200, 
-                       output_reps = 200,
-                       years=100)
+                       reps = 500, 
+                       output_reps = 500,
+                       years=200)
 extU
 
 
